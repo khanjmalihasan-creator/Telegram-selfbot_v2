@@ -47,7 +47,7 @@ class SelfBot:
         try:
             # ساخت کلاینت
             self.client = TelegramClient(
-                'railway_session',
+    'session',
                 API_ID,
                 API_HASH,
                 device_model="iPhone 15 Pro",
