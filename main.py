@@ -11,6 +11,8 @@ import pytz
 from telethon import TelegramClient, events
 from telethon.tl.functions.account import UpdateProfileRequest
 
+print("===== BOT STARTED =====", flush=True)
+
 # ========== تنظیمات اجباری ==========
 API_ID = 31266351
 API_HASH = '0c86dc56c8937015b96c0f306e91fa05'
