@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# سلف بات فارسی - نسخه Railway
-# GitHub: telegram-selfbot-v2
 
 import os
 import sys
@@ -13,83 +11,90 @@ import pytz
 from telethon import TelegramClient, events
 from telethon.tl.functions.account import UpdateProfileRequest
 
-print("=" * 60)
-print("🤖 سلف بات فارسی در حال راه‌اندازی...")
-print("=" * 60)
+# ========== تنظیمات اجباری ==========
+API_ID = 31266351
+API_HASH = '0c86dc56c8937015b96c0f306e91fa05'
+PHONE_NUMBER = '+989396612827'
+# ====================================
 
-# تنظیمات از Variables
-API_ID = int(os.getenv('API_ID', 31266351))
-API_HASH = os.getenv('API_HASH', '0c86dc56c8937015b96c0f306e91fa05')
-PHONE_NUMBER = os.getenv('PHONE_NUMBER', '+989396612827')
+# ========== لیست فحش‌های رکیک واقعی ==========
+BAD_WORDS = [
+    "کص ننت", "کیرم دهنت", "جنده", "کونی", "لاشی",
+    "کص کش", "حرومزاده", "گاییدمت", "ننه جنده",
+    "کصخل", "خارکصه", "تخم سگ", "پدر سوخته",
+    "مادر جنده", "کیر تو کص ننت", "کص لیس",
+    "بی ناموس", "مادر قهوه", "پدر سگ", "خواهر جنده",
+    "کیر خر", "گاو", "الاغ", "حیوان", "کثافت",
+    "گاییده شده", "کونی کصکش", "پدرسگ", "ننتو گاییدم",
+    "کیرم تو اون صورتت", "کص ننت و جد و آبادت",
+    "برو گمشو کصخل", "عقده ای", "پیف پاف",
+    "کیر تو زندگی کصشعرت", "جاکش", "خائن",
+    "کیر تو اون ننه کونیه ات", "کص ننش", "مادر سگ",
+    "کیر تو اون پدر کونی ات", "برو بمیر", "برو گاییده شو",
+    "کص ننت و اونایی که مثل تو هستن", "کونی زاده",
+    "ننتو گاییدم کصکش", "کیر تو اون پدر و مادر عنی ات"
+]
 
-# نمایش تنظیمات
-print(f"📱 شماره: {PHONE_NUMBER}")
-print(f"🆔 API ID: {API_ID}")
-print(f"🔑 API Hash: {API_HASH[:10]}...")
-
-# دیتای سلف بات
-class SelfBot:
+# ========== کلاس اصلی سلف بات ==========
+class PersianSelfBot:
     def __init__(self):
         self.enemy_id = None
         self.enemy_name = None
         self.enemy_mode = False
         self.client = None
         
-        # فحش‌های رکیک
-        self.bad_words = [
-            "کص ننت", "کیرم دهنت", "جنده", "کونی", "لاشی",
-            "کص کش", "حروم زاده", "گاییدمت", "ننه جنده",
-            "کص خل", "خارکصه", "تخم سگ", "بی ناموس"
-        ]
-    
     async def start(self):
         """شروع سلف بات"""
+        print("=" * 60)
+        print("🔥 سلف بات فارسی - حالت دشمن فعال")
+        print(f"📱 شماره: {PHONE_NUMBER}")
+        print("=" * 60)
+        
         try:
-            # ساخت کلاینت
-            self.client = TelegramClient(
-    'session',
-                API_ID,
-                API_HASH,
-                device_model="iPhone 15 Pro",
-                system_version="iOS 17.0",
-                app_version="Telegram iOS 10.0"
-            )
+            from telethon.sessions import StringSession
+
+session_string = os.getenv("SESSION")  # Session String از Variables Railway
+
+self.client = TelegramClient(
+    StringSession(session_string),  # استفاده از StringSession
+    API_ID,
+    API_HASH,
+    device_model="PC",
+    system_version="Linux",
+    app_version="SelfBot v1.0"
+)
             
-            # اتصال
             print("📡 در حال اتصال به تلگرام...")
             await self.client.start(phone=PHONE_NUMBER)
             
-            # اطلاعات کاربر
             me = await self.client.get_me()
             print(f"✅ متصل شدیم به: {me.first_name}")
-            print(f"👤 یوزرنیم: @{me.username}")
             
-            # شروع وظایف
-            asyncio.create_task(self.update_profile_time())
+            # شروع آپدیت ساعت (فقط عدد - بدون ایموجی)
+            asyncio.create_task(self.update_time_only())
             
-            # هندلرها
+            # تنظیم هندلرها
             await self.setup_handlers()
             
             print("\n" + "=" * 50)
             print("🎯 سلف بات فعال شد!")
             print("📌 دستورات:")
-            print("   تنظیم دشمن (با ریپلای)")
-            print("   خاموش دشمن")
-            print("   وضعیت")
+            print("   • تنظیم دشمن (با ریپلای)")
+            print("   • خاموش دشمن")
+            print("   • وضعیت")
             print("=" * 50 + "\n")
             
-            # اجرای دائمی
             await self.client.run_until_disconnected()
             
         except Exception as e:
             print(f"❌ خطا: {e}")
-            print("تلاش مجدد در 10 ثانیه...")
-            time.sleep(10)
+            print("تلاش مجدد...")
+            await asyncio.sleep(5)
             await self.start()
     
-    async def update_profile_time(self):
-        """آپدیت تایم ایران روی پروفایل"""
-        print("🕒 شروع آپدیت زمان پروفایل...")
+    async def update_time_only(self):
+        """آپدیت ساعت روی پروفایل - فقط عدد، بدون ایموجی، بدون بیوگرافی"""
+        print("🕒 شروع آپدیت ساعت پروفایل...")
         
         while True:
             try:
@@ -97,21 +102,21 @@ class SelfBot:
                 iran_tz = pytz.timezone('Asia/Tehran')
                 now = datetime.now(iran_tz)
                 
-                # فرمت زمان
-                time_str = f"🕒 {now.strftime('%H:%M')} تهران"
+                # فقط ساعت و دقیقه - بدون هیچ ایموجی یا علامت اضافه
+                time_str = now.strftime('%H:%M')
                 
-                # آپدیت پروفایل
+                # آپدیت فقط اسم پروفایل - بیوگرافی دست نمی‌خوره
                 await self.client(UpdateProfileRequest(
                     first_name=time_str,
-                    about="🔺به دلیل مشغله کاری و قطعی مکرر اینترنت ممکنه کمی با تاخیر جواب بگیرید"
+                    about=None  # بیوگرافی تغییر نمی‌کنه
                 ))
                 
-                print(f"✅ پروفایل آپدیت شد: {time_str}")
+                print(f"✅ ساعت آپدیت شد: {time_str}")
                 
             except Exception as e:
-                print(f"⚠️ خطا در آپدیت پروفایل: {e}")
+                print(f"⚠️ خطا در آپدیت ساعت: {e}")
             
-            # هر 5 دقیقه
+            # هر 5 دقیقه آپدیت کن
             await asyncio.sleep(300)
     
     async def setup_handlers(self):
@@ -126,7 +131,7 @@ class SelfBot:
             sender = await event.get_sender()
             print(f"📨 پیام از {sender.first_name}: {event.text[:30]}...")
             
-            # تنظیم دشمن
+            # ========== تنظیم دشمن ==========
             if event.text == 'تنظیم دشمن' and event.is_reply:
                 reply = await event.get_reply_message()
                 target = await reply.get_sender()
@@ -135,47 +140,53 @@ class SelfBot:
                 self.enemy_name = target.first_name or "کاربر"
                 self.enemy_mode = True
                 
-                await event.reply(f"✅ دشمن تنظیم شد!\n👤: {self.enemy_name}")
+                await event.reply(f"✅ دشمن تنظیم شد: {self.enemy_name}")
                 print(f"🎯 دشمن تنظیم شد: {self.enemy_name}")
                 return
             
-            # خاموش دشمن
+            # ========== خاموش دشمن ==========
             if event.text == 'خاموش دشمن':
                 self.enemy_mode = False
+                self.enemy_id = None
+                self.enemy_name = None
                 await event.reply("✅ حالت دشمن خاموش شد")
                 print("🟢 حالت دشمن خاموش شد")
                 return
             
-            # وضعیت
+            # ========== وضعیت ==========
             if event.text == 'وضعیت':
-                status = "فعال ✅" if self.enemy_mode else "غیرفعال ⭕"
+                status = "فعال" if self.enemy_mode else "غیرفعال"
                 enemy = self.enemy_name if self.enemy_mode else "ندارد"
                 
                 await event.reply(
-                    f"📊 وضعیت:\n\n"
+                    f"📊 وضعیت سلف بات:\n\n"
                     f"🔥 حالت دشمن: {status}\n"
-                    f"👤 دشمن: {enemy}\n"
-                    f"🕒 تایم ایران: فعال\n"
-                    f"📡 هاست: Railway"
+                    f"👤 دشمن فعلی: {enemy}\n"
+                    f"🕒 ساعت پروفایل: فعال\n"
+                    f"🌐 هاست: Railway"
                 )
                 return
             
-            # پاسخ به دشمن
-            if self.enemy_mode and event.sender_id == self.enemy_id:
-                bad_word = random.choice(self.bad_words)
-                emoji = random.choice(["🔥", "⚡", "💢"])
-                await event.reply(f"{emoji} {bad_word} {emoji}")
-                print(f"🔥 به دشمن جواب دادم: {bad_word}")
+            # ========== پاسخ به دشمن (فحش رکیک) ==========
+            if self.enemy_mode and self.enemy_id and event.sender_id == self.enemy_id:
+                # انتخاب فحش رکیک
+                bad_word = random.choice(BAD_WORDS)
+                
+                # 80% شانس پاسخ
+                if random.random() < 0.8:
+                    await event.reply(bad_word)
+                    print(f"🔥 فحش به دشمن: {bad_word[:20]}...")
                 return
             
-            # پاسخ خودکار به پیام خصوصی
+            # ========== پاسخ خودکار به پیام خصوصی ==========
             if event.is_private:
-                await asyncio.sleep(random.uniform(2, 6))
+                # تأخیر 2-8 ثانیه
+                await asyncio.sleep(random.uniform(2, 8))
                 await event.reply("🔺به دلیل مشغله کاری و قطعی مکرر اینترنت ممکنه کمی با تاخیر جواب بگیرید")
                 print(f"🤖 پاسخ خودکار به {sender.first_name}")
 
-# ساخت و اجرای بات
-bot = SelfBot()
+# ========== اجرای بات ==========
+bot = PersianSelfBot()
 
 async def main():
     await bot.start()
@@ -187,5 +198,5 @@ if __name__ == "__main__":
         print("\n\n🛑 سلف بات متوقف شد.")
     except Exception as e:
         print(f"\n❌ خطای غیرمنتظره: {e}")
-        time.sleep(10)
+        time.sleep(5)
         asyncio.run(main())
